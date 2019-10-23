@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 
 	"github.com/jtblin/go-logger"
-	"github.com/go-acme/lego/v3/acme"
+	"github.com/go-acme/lego/v3/registration"
 )
 
 // Account is used to store lets encrypt registration info
@@ -17,7 +17,7 @@ type Account struct {
 	DomainsCertificate *DomainCertificate
 	Logger      logger.Interface
 	PrivateKey         []byte
-	Registration       *acme.RegistrationResource
+	Registration       *registration.Resource
 }
 
 // GetEmail returns email.
@@ -26,7 +26,7 @@ func (a Account) GetEmail() string {
 }
 
 // GetRegistration returns lets encrypt registration resource.
-func (a Account) GetRegistration() *acme.RegistrationResource {
+func (a Account) GetRegistration() *registration.Resource {
 	return a.Registration
 }
 

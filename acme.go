@@ -1,17 +1,20 @@
 package acme
+// see https://go-acme.github.io/lego/usage/library/
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
 
 	"github.com/jtblin/go-logger"
-	"github.com/xenolf/lego/acme"
+	"github.com/go-acme/lego/v3/lego"
+	"github.com/go-acme/lego/v3/certcrypto"
+	"github.com/go-acme/lego/v3/registration"
+	"github.com/go-acme/lego/v3/certificate"
 
 	"github.com/jtblin/go-acme/backend"
 	_ "github.com/jtblin/go-acme/backend/backends" // import all backends.
@@ -37,7 +40,7 @@ type ACME struct {
 	SelfSigned  bool
 }
 
-func (a *ACME) retrieveCertificate(client *acme.Client, account *types.Account) (*tls.Certificate, error) {
+func (a *ACME) retrieveCertificate(client *lego.Client, account *types.Account) (*tls.Certificate, error) {
 	a.Logger.Println("Retrieving ACME certificate...")
 	domain := []string{}
 	domain = append(domain, a.Domain.Main)
@@ -70,27 +73,15 @@ func needsUpdate(cert *tls.Certificate) bool {
 	return false
 }
 
-func (a *ACME) renewCertificate(client *acme.Client, account *types.Account) error {
+func (a *ACME) renewCertificate(client *lego.Client, account *types.Account) error {
 	dc := account.DomainsCertificate
 	if needsUpdate(dc.TLSCert) {
-		renewedCert, err := client.RenewCertificate(acme.CertificateResource{
-			Domain:        dc.Certificate.Domain,
-			CertURL:       dc.Certificate.CertURL,
-			CertStableURL: dc.Certificate.CertStableURL,
-			PrivateKey:    dc.Certificate.PrivateKey,
-			Certificate:   dc.Certificate.Cert,
-		}, false)
+		mustStaple := false
+		renewedCert, err := client.Certificate.Renew(*dc.Certificate, bundleCA, mustStaple)
 		if err != nil {
 			return err
 		}
-		renewedACMECert := &types.Certificate{
-			Domain:        renewedCert.Domain,
-			CertURL:       renewedCert.CertURL,
-			CertStableURL: renewedCert.CertStableURL,
-			PrivateKey:    renewedCert.PrivateKey,
-			Cert:          renewedCert.Certificate,
-		}
-		err = dc.RenewCertificate(renewedACMECert, dc.Domain)
+		err = dc.RenewCertificate(renewedCert, dc.Domain)
 		if err != nil {
 			return err
 		}
@@ -101,12 +92,17 @@ func (a *ACME) renewCertificate(client *acme.Client, account *types.Account) err
 	return nil
 }
 
-func (a *ACME) buildACMEClient(Account *types.Account) (*acme.Client, error) {
+func (a *ACME) buildACMEClient(Account *types.Account) (*lego.Client, error) {
 	caServer := defaultCAServer
 	if len(a.CAServer) > 0 {
 		caServer = a.CAServer
 	}
-	client, err := acme.NewClient(caServer, Account, acme.RSA4096)
+	config := lego.NewConfig(Account)
+	// This CA URL is configured for a local dev instance of Boulder running in Docker in a VM.
+	config.CADirURL = caServer
+	config.Certificate.KeyType = certcrypto.RSA2048
+	// A client facilitates communication with the CA server.
+	client, err := lego.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
@@ -114,19 +110,20 @@ func (a *ACME) buildACMEClient(Account *types.Account) (*acme.Client, error) {
 	return client, nil
 }
 
-func (a *ACME) getDomainCertificate(client *acme.Client, domains []string) (*types.Certificate, error) {
-	certificate, failures := client.ObtainCertificate(domains, bundleCA, nil)
-	if len(failures) > 0 {
-		return nil, fmt.Errorf("Cannot obtain certificates %s+v", failures)
+func (a *ACME) getDomainCertificate(client *lego.Client, domains []string) (*certificate.Resource, error) {
+	request := certificate.ObtainRequest{
+		Domains: domains,
+		Bundle:  bundleCA,
 	}
+	certificates, err := client.Certificate.Obtain(request)
+	if err != nil  {
+		return nil, fmt.Errorf("Cannot obtain certificates %s+v", err)
+	}
+	// Each certificate comes back with the cert bytes, the bytes of the client's
+	// private key, and a certificate URL. SAVE THESE TO DISK.
+	//fmt.Printf("%#v\n", certificates)
 	a.Logger.Printf("Loaded ACME certificates %s\n", domains)
-	return &types.Certificate{
-		Domain:        certificate.Domain,
-		CertURL:       certificate.CertURL,
-		CertStableURL: certificate.CertStableURL,
-		PrivateKey:    certificate.PrivateKey,
-		Cert:          certificate.Certificate,
-	}, nil
+	return certificates, nil
 }
 
 // CreateConfig creates a tls.config from using ACME configuration
@@ -147,7 +144,7 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 		return nil
 	}
 
-	acme.Logger = log.New(ioutil.Discard, "", 0)
+	//lego.Logger = log.New(ioutil.Discard, "", 0)
 
 	if a.BackendName == "" {
 		a.BackendName = "fs"
@@ -184,31 +181,23 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 	if err != nil {
 		return err
 	}
-	client.ExcludeChallenges([]acme.Challenge{acme.HTTP01, acme.TLSSNI01})
 	provider, err := newDNSProvider(a.DNSProvider)
 	if err != nil {
 		return err
 	}
-	client.SetChallengeProvider(acme.DNS01, provider)
+	client.Challenge.SetDNS01Provider(provider)
 
 	if needRegister {
 		// New users need to register.
-		reg, err := client.Register()
+		reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 		if err != nil {
 			return err
 		}
 		account.Registration = reg
-
-		// The client has a URL to the current Let's Encrypt Subscriber
-		// Agreement. The user needs to agree to it.
-		err = client.AgreeToTOS()
-		if err != nil {
-			return err
-		}
 	}
 
 	dc := account.DomainsCertificate
-	if len(dc.Certificate.Cert) > 0 && len(dc.Certificate.PrivateKey) > 0 {
+	if len(dc.Certificate.Certificate) > 0 && len(dc.Certificate.PrivateKey) > 0 {
 		go func() {
 			if err := a.renewCertificate(client, account); err != nil {
 				a.Logger.Printf("Error renewing ACME certificate for %q: %s\n",

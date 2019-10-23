@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"reflect"
+	"github.com/go-acme/lego/v3/certificate"
 )
 
 // Certificate is used to store certificate info.
@@ -17,7 +18,7 @@ type Certificate struct {
 
 // DomainCertificate contains a certificate for a domain and SANs.
 type DomainCertificate struct {
-	Certificate *Certificate
+	Certificate *certificate.Resource
 	Domain      *Domain
 	TLSCert     *tls.Certificate `json:"-"`
 }
@@ -29,7 +30,7 @@ type Domain struct {
 }
 
 func (dc *DomainCertificate) tlsCert() (*tls.Certificate, error) {
-	cert, err := tls.X509KeyPair(dc.Certificate.Cert, dc.Certificate.PrivateKey)
+	cert, err := tls.X509KeyPair(dc.Certificate.Certificate, dc.Certificate.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func (dc *DomainCertificate) Init() error {
 }
 
 // RenewCertificate renew the certificate for the domain.
-func (dc *DomainCertificate) RenewCertificate(acmeCert *Certificate, domain *Domain) error {
+func (dc *DomainCertificate) RenewCertificate(acmeCert *certificate.Resource, domain *Domain) error {
 	if reflect.DeepEqual(domain, dc.Domain) {
 		dc.Certificate = acmeCert
 		if err := dc.Init(); err != nil {
@@ -59,7 +60,7 @@ func (dc *DomainCertificate) RenewCertificate(acmeCert *Certificate, domain *Dom
 }
 
 // AddCertificate add the certificate for the domain.
-func (dc *DomainCertificate) AddCertificate(acmeCert *Certificate, domain *Domain) error {
+func (dc *DomainCertificate) AddCertificate(acmeCert *certificate.Resource, domain *Domain) error {
 	dc.Domain = domain
 	dc.Certificate = acmeCert
 	return dc.Init()

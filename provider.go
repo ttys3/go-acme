@@ -1,12 +1,14 @@
 package acme
 
 import (
-	"github.com/go-acme/lego/v3/acme"
+	"github.com/go-acme/lego/v3/challenge"
+	"github.com/go-acme/lego/v3/providers/dns/acmedns"
+	"github.com/go-acme/lego/v3/providers/dns/alidns"
+	"github.com/go-acme/lego/v3/providers/dns/cloudxns"
 	"github.com/go-acme/lego/v3/providers/dns/cloudflare"
 	"github.com/go-acme/lego/v3/providers/dns/digitalocean"
-	"github.com/go-acme/lego/v3/providers/dns/dnsimple"
-	"github.com/go-acme/lego/v3/providers/dns/dyn"
-	"github.com/go-acme/lego/v3/providers/dns/gandi"
+	"github.com/go-acme/lego/v3/providers/dns/dnspod"
+	"github.com/go-acme/lego/v3/providers/dns/linodev4"
 	"github.com/go-acme/lego/v3/providers/dns/gcloud"
 	"github.com/go-acme/lego/v3/providers/dns/namecheap"
 	"github.com/go-acme/lego/v3/providers/dns/rfc2136"
@@ -14,22 +16,24 @@ import (
 	"github.com/go-acme/lego/v3/providers/dns/vultr"
 )
 
-func newDNSProvider(dns string) (acme.ChallengeProvider, error) {
+func newDNSProvider(dns string) (challenge.Provider, error) {
 	switch dns {
+	case "acmedns":
+		return acmedns.NewDNSProvider()
+	case "alidns":
+		return alidns.NewDNSProvider()
+	case "cloudxns":
+		return cloudxns.NewDNSProvider()
 	case "cloudflare":
 		return cloudflare.NewDNSProvider()
 	case "digitalocean":
 		return digitalocean.NewDNSProvider()
-	case "dnsimple":
-		return dnsimple.NewDNSProvider()
-	case "dyn":
-		return dyn.NewDNSProvider()
-	case "gandi":
-		return gandi.NewDNSProvider()
+	case "dnspod":
+		return dnspod.NewDNSProvider()
 	case "gcloud":
-		return googlecloud.NewDNSProvider()
-	case "manual":
-		return acme.NewDNSProviderManual()
+		return gcloud.NewDNSProvider()
+	case "linodev4":
+		return linodev4.NewDNSProvider()
 	case "namecheap":
 		return namecheap.NewDNSProvider()
 	case "route53":
