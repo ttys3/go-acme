@@ -53,7 +53,7 @@ func generateDerCert(privateKey *rsa.PrivateKey, expiration time.Time, domain st
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			CommonName: "DEFAULT CERT",
+			CommonName: domain,
 		},
 		NotBefore: time.Now(),
 		NotAfter:  expiration,
