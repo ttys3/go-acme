@@ -3,8 +3,8 @@ package types
 import (
 	"crypto/tls"
 	"errors"
-	"reflect"
 	"github.com/go-acme/lego/v3/certificate"
+	"reflect"
 )
 
 // Certificate is used to store certificate info.

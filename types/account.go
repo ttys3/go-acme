@@ -6,8 +6,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 
-	"github.com/jtblin/go-logger"
+	"github.com/go-acme/lego/v3/certificate"
 	"github.com/go-acme/lego/v3/registration"
+	"github.com/jtblin/go-logger"
 )
 
 // Account is used to store lets encrypt registration info
@@ -52,7 +53,7 @@ func NewAccount(email string, domain *Domain, logger logger.Interface) (*Account
 		PrivateKey: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
 	account.DomainsCertificate = &DomainCertificate{
-		Certificate: &Certificate{},
+		Certificate: &certificate.Resource{},
 		Domain:      domain,
 	}
 	return account, nil
