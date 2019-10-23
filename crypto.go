@@ -39,6 +39,7 @@ func generatePemCert(privateKey *rsa.PrivateKey, domain string) ([]byte, error) 
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes}), nil
 }
 
+// ref to https://golang.org/src/crypto/tls/generate_cert.go
 func generateDerCert(privateKey *rsa.PrivateKey, expiration time.Time, domain string) ([]byte, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
@@ -54,11 +55,13 @@ func generateDerCert(privateKey *rsa.PrivateKey, expiration time.Time, domain st
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			CommonName: domain,
+			Organization: []string{"Acme Co"},
 		},
 		NotBefore: time.Now(),
 		NotAfter:  expiration,
 
-		KeyUsage:              x509.KeyUsageKeyEncipherment,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		DNSNames:              []string{domain},
 	}
