@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/jtblin/go-acme"
 	pb "github.com/jtblin/go-acme/examples/grpc/helloworld"
 	"github.com/jtblin/go-acme/types"

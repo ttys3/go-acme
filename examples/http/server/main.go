@@ -5,7 +5,7 @@ import (
 	"flag"
 	"net/http"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/jtblin/go-acme"
 	"github.com/jtblin/go-acme/types"
 )

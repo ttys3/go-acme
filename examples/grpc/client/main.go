@@ -36,7 +36,7 @@ package main
 import (
 	"flag"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	pb "github.com/jtblin/go-acme/examples/grpc/helloworld"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

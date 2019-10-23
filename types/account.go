@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 
 	"github.com/jtblin/go-logger"
-	"github.com/xenolf/lego/acme"
+	"github.com/go-acme/lego/v3/acme"
 )
 
 // Account is used to store lets encrypt registration info

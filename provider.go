@@ -1,17 +1,17 @@
 package acme
 
 import (
-	"github.com/xenolf/lego/acme"
-	"github.com/xenolf/lego/providers/dns/cloudflare"
-	"github.com/xenolf/lego/providers/dns/digitalocean"
-	"github.com/xenolf/lego/providers/dns/dnsimple"
-	"github.com/xenolf/lego/providers/dns/dyn"
-	"github.com/xenolf/lego/providers/dns/gandi"
-	"github.com/xenolf/lego/providers/dns/googlecloud"
-	"github.com/xenolf/lego/providers/dns/namecheap"
-	"github.com/xenolf/lego/providers/dns/rfc2136"
-	"github.com/xenolf/lego/providers/dns/route53"
-	"github.com/xenolf/lego/providers/dns/vultr"
+	"github.com/go-acme/lego/v3/acme"
+	"github.com/go-acme/lego/v3/providers/dns/cloudflare"
+	"github.com/go-acme/lego/v3/providers/dns/digitalocean"
+	"github.com/go-acme/lego/v3/providers/dns/dnsimple"
+	"github.com/go-acme/lego/v3/providers/dns/dyn"
+	"github.com/go-acme/lego/v3/providers/dns/gandi"
+	"github.com/go-acme/lego/v3/providers/dns/gcloud"
+	"github.com/go-acme/lego/v3/providers/dns/namecheap"
+	"github.com/go-acme/lego/v3/providers/dns/rfc2136"
+	"github.com/go-acme/lego/v3/providers/dns/route53"
+	"github.com/go-acme/lego/v3/providers/dns/vultr"
 )
 
 func newDNSProvider(dns string) (acme.ChallengeProvider, error) {
