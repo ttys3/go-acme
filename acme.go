@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/go-acme/lego/v3/challenge"
 	"log"
 	"os"
 	"time"
@@ -25,7 +26,7 @@ const (
 	// #2 - important set to true to bundle CA with certificate and
 	// avoid "transport: x509: certificate signed by unknown authority" error
 	bundleCA        = true
-	defaultCAServer = "https://acme-v01.api.letsencrypt.org/directory"
+	defaultCAServer = "https://acme-v02.api.letsencrypt.org/directory"
 )
 
 // ACME allows to connect to lets encrypt and retrieve certs.
@@ -45,11 +46,11 @@ func (a *ACME) retrieveCertificate(client *lego.Client, account *types.Account) 
 	domain := []string{}
 	domain = append(domain, a.Domain.Main)
 	domain = append(domain, a.Domain.SANs...)
-	certificate, err := a.getDomainCertificate(client, domain)
+	certificates, err := a.getDomainCertificate(client, domain)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting ACME certificate for domain %s: %s", domain, err.Error())
 	}
-	if err = account.DomainsCertificate.AddCertificate(certificate, a.Domain); err != nil {
+	if err = account.DomainsCertificate.AddCertificate(certificates, a.Domain); err != nil {
 		return nil, fmt.Errorf("Error adding ACME certificate for domain %s: %s", domain, err.Error())
 	}
 	if err = a.backend.SaveAccount(account); err != nil {
@@ -161,37 +162,45 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 	a.Logger.Println("Loading ACME certificate...")
 	account, err = a.backend.LoadAccount(a.Domain.Main)
 	if err != nil {
-		return err
+		return fmt.Errorf("[go-acme] LoadAccount() err: %w", err)
 	}
 	if account != nil {
 		a.Logger.Printf("Loaded ACME config from storage %q\n", a.backend.Name())
 		if err = account.DomainsCertificate.Init(); err != nil {
-			return err
+			return fmt.Errorf("[go-acme] account.DomainsCertificate.Init() err: %w", err)
 		}
 	} else {
 		a.Logger.Println("Generating ACME Account...")
 		account, err = types.NewAccount(a.Email, a.Domain, a.Logger)
 		if err != nil {
-			return err
+			return fmt.Errorf("[go-acme] NewAccount err: %w", err)
 		}
 		needRegister = true
 	}
 
 	client, err := a.buildACMEClient(account)
 	if err != nil {
-		return err
+		return fmt.Errorf("[go-acme] buildACMEClient err: %w", err)
 	}
 	provider, err := newDNSProvider(a.DNSProvider)
 	if err != nil {
-		return err
+		return fmt.Errorf("[go-acme] newDNSProvider err: %w", err)
 	}
-	client.Challenge.SetDNS01Provider(provider)
+
+	// silent acme: Could not find solver for: tls-alpn-01
+	client.Challenge.Remove(challenge.TLSALPN01)
+	// silent acme: Could not find solver for: http-01
+	client.Challenge.Remove(challenge.HTTP01)
+
+	if err := client.Challenge.SetDNS01Provider(provider); err != nil {
+		return fmt.Errorf("[go-acme] SetDNS01Provider err: %w", err)
+	}
 
 	if needRegister {
 		// New users need to register.
 		reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 		if err != nil {
-			return err
+			return fmt.Errorf("[go-acme] client.Registration.Register err: %w", err)
 		}
 		account.Registration = reg
 	}

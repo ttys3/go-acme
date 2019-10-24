@@ -4,6 +4,7 @@ import (
 	"github.com/go-acme/lego/v3/challenge"
 	"github.com/go-acme/lego/v3/providers/dns/acmedns"
 	"github.com/go-acme/lego/v3/providers/dns/alidns"
+	"github.com/go-acme/lego/v3/providers/dns/azure"
 	"github.com/go-acme/lego/v3/providers/dns/cloudflare"
 	"github.com/go-acme/lego/v3/providers/dns/cloudxns"
 	"github.com/go-acme/lego/v3/providers/dns/digitalocean"
@@ -22,6 +23,8 @@ func newDNSProvider(dns string) (challenge.Provider, error) {
 		return acmedns.NewDNSProvider()
 	case "alidns":
 		return alidns.NewDNSProvider()
+	case "azure":
+		return azure.NewDNSProvider()
 	case "cloudxns":
 		return cloudxns.NewDNSProvider()
 	case "cloudflare":
