@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"fmt"
 	"github.com/go-acme/lego/v3/challenge"
 	"github.com/go-acme/lego/v3/providers/dns/acmedns"
 	"github.com/go-acme/lego/v3/providers/dns/alidns"
@@ -46,6 +47,6 @@ func newDNSProvider(dns string) (challenge.Provider, error) {
 	case "vultr":
 		return vultr.NewDNSProvider()
 	default:
-		panic("Unknown dns provider " + dns)
+		return nil, fmt.Errorf("[go-acme] newDNSProvider(): Unknown dns provider %s", dns)
 	}
 }
