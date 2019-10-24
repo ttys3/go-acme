@@ -13,6 +13,7 @@ import (
 	"github.com/go-acme/lego/v3/providers/dns/gcloud"
 	"github.com/go-acme/lego/v3/providers/dns/linodev4"
 	"github.com/go-acme/lego/v3/providers/dns/namecheap"
+	"github.com/ttys3/lego-providers/dns/qcloud"
 	"github.com/go-acme/lego/v3/providers/dns/rfc2136"
 	"github.com/go-acme/lego/v3/providers/dns/route53"
 	"github.com/go-acme/lego/v3/providers/dns/vultr"
@@ -40,6 +41,8 @@ func newDNSProvider(dns string) (challenge.Provider, error) {
 		return linodev4.NewDNSProvider()
 	case "namecheap":
 		return namecheap.NewDNSProvider()
+	case "qcloud":
+		return qcloud.NewDNSProvider()
 	case "route53":
 		return route53.NewDNSProvider()
 	case "rfc2136":
