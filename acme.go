@@ -78,7 +78,7 @@ func (a *ACME) renewCertificate(client *lego.Client, account *types.Account) err
 	dc := account.DomainsCertificate
 	if needsUpdate(dc.TLSCert) {
 		mustStaple := false
-		renewedCert, err := client.Certificate.Renew(*dc.Certificate, bundleCA, mustStaple)
+		renewedCert, err := client.Certificate.Renew(certificate.Resource(*dc.Certificate), bundleCA, mustStaple)
 		if err != nil {
 			return err
 		}

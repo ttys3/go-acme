@@ -6,7 +6,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 
-	"github.com/go-acme/lego/v3/certificate"
 	"github.com/go-acme/lego/v3/registration"
 	"github.com/jtblin/go-logger"
 )
@@ -16,7 +15,7 @@ import (
 type Account struct {
 	Email              string
 	DomainsCertificate *DomainCertificate
-	Logger      logger.Interface
+	Logger      	   logger.Interface	  `json:"-"`
 	PrivateKey         []byte
 	Registration       *registration.Resource
 }
@@ -53,7 +52,7 @@ func NewAccount(email string, domain *Domain, logger logger.Interface) (*Account
 		PrivateKey: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
 	account.DomainsCertificate = &DomainCertificate{
-		Certificate: &certificate.Resource{},
+		Certificate: &Resource{},
 		Domain:      domain,
 	}
 	return account, nil

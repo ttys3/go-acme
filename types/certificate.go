@@ -8,17 +8,25 @@ import (
 )
 
 // Certificate is used to store certificate info.
-type Certificate struct {
-	Domain        string
-	CertURL       string
-	CertStableURL string
-	PrivateKey    []byte
-	Cert          []byte
+// copy struct from github.com/go-acme/lego/v3/certificate.Resource but allow save PrivateKey and Certificate field etc ...
+// Resource represents a CA issued certificate.
+// PrivateKey, Certificate and IssuerCertificate are all
+// already PEM encoded and can be directly written to disk.
+// Certificate may be a certificate bundle,
+// depending on the options supplied to create it.
+type Resource struct {
+	Domain            string `json:"domain"`
+	CertURL           string `json:"certUrl"`
+	CertStableURL     string `json:"certStableUrl"`
+	PrivateKey        []byte `json:"privateKey"`
+	Certificate       []byte `json:"certificate"`
+	IssuerCertificate []byte `json:"issuerCertificate"`
+	CSR               []byte `json:"CSR"`
 }
 
 // DomainCertificate contains a certificate for a domain and SANs.
 type DomainCertificate struct {
-	Certificate *certificate.Resource
+	Certificate *Resource
 	Domain      *Domain
 	TLSCert     *tls.Certificate `json:"-"`
 }
@@ -50,7 +58,7 @@ func (dc *DomainCertificate) Init() error {
 // RenewCertificate renew the certificate for the domain.
 func (dc *DomainCertificate) RenewCertificate(acmeCert *certificate.Resource, domain *Domain) error {
 	if reflect.DeepEqual(domain, dc.Domain) {
-		dc.Certificate = acmeCert
+		dc.Certificate = (*Resource)(acmeCert)
 		if err := dc.Init(); err != nil {
 			return err
 		}
@@ -62,6 +70,6 @@ func (dc *DomainCertificate) RenewCertificate(acmeCert *certificate.Resource, do
 // AddCertificate add the certificate for the domain.
 func (dc *DomainCertificate) AddCertificate(acmeCert *certificate.Resource, domain *Domain) error {
 	dc.Domain = domain
-	dc.Certificate = acmeCert
+	dc.Certificate = (*Resource)(acmeCert)
 	return dc.Init()
 }
