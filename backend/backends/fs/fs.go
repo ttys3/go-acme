@@ -14,7 +14,7 @@ import (
 
 const (
 	backendName   = "fs"
-	storageDirEnv = "STORAGE_DIR"
+	storageDirEnv = "GO_ACME_STORAGE_DIR"
 )
 
 type storage struct {
