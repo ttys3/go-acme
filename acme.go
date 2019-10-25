@@ -101,6 +101,9 @@ func (a *ACME) buildACMEClient(Account *types.Account) (*lego.Client, error) {
 	// This CA URL is configured for a local dev instance of Boulder running in Docker in a VM.
 	config.CADirURL = caServer
 	config.Certificate.KeyType = certcrypto.EC256
+	config.Certificate.Timeout = time.Second * 60
+	config.HTTPClient.Timeout = time.Second * 60
+	
 	// A client facilitates communication with the CA server.
 	client, err := lego.NewClient(config)
 	if err != nil {
