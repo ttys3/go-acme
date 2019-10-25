@@ -24,17 +24,17 @@ type Account struct {
 }
 
 // GetEmail returns email.
-func (a Account) GetEmail() string {
+func (a *Account) GetEmail() string {
 	return a.Email
 }
 
 // GetRegistration returns lets encrypt registration resource.
-func (a Account) GetRegistration() *registration.Resource {
+func (a *Account) GetRegistration() *registration.Resource {
 	return a.Registration
 }
 
 // GetPrivateKey returns private key.
-func (a Account) GetPrivateKey() crypto.PrivateKey {
+func (a *Account) GetPrivateKey() crypto.PrivateKey {
 	if privateKey, err := x509.ParsePKCS1PrivateKey(a.PrivateKey); err == nil {
 		return privateKey
 	}
@@ -43,7 +43,7 @@ func (a Account) GetPrivateKey() crypto.PrivateKey {
 }
 
 // GetKeyType the type from which private keys should be generated
-func (a Account) GetKeyType() certcrypto.KeyType {
+func (a *Account) GetKeyType() certcrypto.KeyType {
 	switch strings.ToUpper(a.KeyType) {
 	case "RSA2048":
 		return certcrypto.RSA2048
@@ -61,7 +61,7 @@ func (a Account) GetKeyType() certcrypto.KeyType {
 }
 
 // NewAccount creates a new account for the specified email and domain.
-func NewAccount(email string, domain *Domain, logger logger.Interface) (*Account, error) {
+func NewAccount(email string, domain *Domain, keyType string, logger logger.Interface) (*Account, error) {
 	// Create a user. New accounts need an email and private key to start
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
@@ -70,6 +70,7 @@ func NewAccount(email string, domain *Domain, logger logger.Interface) (*Account
 	account := &Account{
 		Email:      email,
 		Logger:     logger,
+		KeyType:    keyType,
 		PrivateKey: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
 	account.DomainsCertificate = &DomainCertificate{

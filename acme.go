@@ -59,6 +59,7 @@ type ACME struct {
 	CAServer    string
 	DNSProvider string
 	Email       string
+	KeyType     string
 	SelfSigned  bool
 }
 
@@ -195,7 +196,7 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 		}
 	} else {
 		a.Logger.Println("Generating ACME Account...")
-		account, err = types.NewAccount(a.Email, a.Domain, a.Logger)
+		account, err = types.NewAccount(a.Email, a.Domain, a.KeyType, a.Logger)
 		if err != nil {
 			return fmt.Errorf("[go-acme] NewAccount err: %w", err)
 		}
