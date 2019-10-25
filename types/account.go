@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"github.com/go-acme/lego/v3/certcrypto"
+	"strings"
 
 	"github.com/go-acme/lego/v3/registration"
 	"github.com/jtblin/go-logger"
@@ -13,6 +15,7 @@ import (
 // Account is used to store lets encrypt registration info
 // and implements the acme.User interface.
 type Account struct {
+	KeyType            string
 	Email              string
 	DomainsCertificate *DomainCertificate
 	Logger      	   logger.Interface	  `json:"-"`
@@ -37,6 +40,24 @@ func (a Account) GetPrivateKey() crypto.PrivateKey {
 	}
 	a.Logger.Printf("Cannot unmarshall private key %+v\n", a.PrivateKey)
 	return nil
+}
+
+// GetKeyType the type from which private keys should be generated
+func (a Account) GetKeyType() certcrypto.KeyType {
+	switch strings.ToUpper(a.KeyType) {
+	case "RSA2048":
+		return certcrypto.RSA2048
+	case "RSA4096":
+		return certcrypto.RSA4096
+	case "RSA8192":
+		return certcrypto.RSA8192
+	case "EC256":
+		return certcrypto.EC256
+	case "EC384":
+		return certcrypto.EC384
+	default:
+		return certcrypto.EC256
+	}
 }
 
 // NewAccount creates a new account for the specified email and domain.

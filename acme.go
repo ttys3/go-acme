@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-acme/lego/v3/certcrypto"
 	"github.com/go-acme/lego/v3/certificate"
 	"github.com/go-acme/lego/v3/lego"
 	"github.com/go-acme/lego/v3/registration"
@@ -100,7 +99,7 @@ func (a *ACME) buildACMEClient(Account *types.Account) (*lego.Client, error) {
 	config := lego.NewConfig(Account)
 	// This CA URL is configured for a local dev instance of Boulder running in Docker in a VM.
 	config.CADirURL = caServer
-	config.Certificate.KeyType = certcrypto.EC256
+	config.Certificate.KeyType = Account.GetKeyType()
 	config.Certificate.Timeout = time.Second * 60
 	config.HTTPClient.Timeout = time.Second * 60
 	
