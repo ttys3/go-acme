@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/jtblin/go-acme/backend"
@@ -28,6 +29,11 @@ func (s *storage) Name() string {
 }
 
 func (s *storage) key(domain string) string {
+	// save *.example.com to file _wildcard.example.com
+	if strings.HasPrefix(domain, "*") {
+		domain = strings.TrimPrefix(domain, "*")
+		domain = "_wildcard" + domain
+	}
 	return path.Join(s.StorageDir, domain) + ".json"
 }
 
