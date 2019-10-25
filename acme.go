@@ -4,7 +4,6 @@ package acme
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"github.com/go-acme/lego/v3/challenge"
 	"log"
@@ -219,9 +218,10 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 		}
 	}
 	tlsConfig.GetCertificate = func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		if clientHello.ServerName != a.Domain.Main {
-			return nil, errors.New("Unknown server name")
-		}
+		// it may be a wildcard domain certificate or SANs certificate, so we can not simply use equal to validate
+		//if clientHello.ServerName != a.Domain.Main {
+		//	return nil, fmt.Errorf("[go-acme] Unknown server name: %s", clientHello.ServerName)
+		//}
 		return dc.TLSCert, nil
 	}
 	a.Logger.Println("Loaded certificate...")
