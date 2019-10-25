@@ -8,6 +8,7 @@ import (
 	"github.com/go-acme/lego/v3/challenge"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-acme/lego/v3/certificate"
@@ -27,11 +28,33 @@ const (
 	defaultCAServer = "https://acme-v02.api.letsencrypt.org/directory"
 )
 
+// HostPolicy borrowed from golang.org/x/crypto/acme/autocert
+// HostPolicy specifies which host names the Manager is allowed to respond to.
+// It returns a non-nil error if the host should be rejected.
+// The returned error is accessible via tls.Conn.Handshake and its callers.
+// See Manager's HostPolicy field and GetCertificate method docs for more details.
+type HostPolicy func(host string) error
+
 // ACME allows to connect to lets encrypt and retrieve certs.
 type ACME struct {
 	backend     backend.Interface
 	Domain      *types.Domain
 	Logger      logger.Interface
+
+	// HostPolicy controls which domains the Manager will attempt
+	// to retrieve new certificates for. It does not affect cached certs.
+	//
+	// If non-nil, HostPolicy is called before requesting a new cert.
+	// If nil, all hosts are currently allowed. This is not recommended,
+	// as it opens a potential attack where clients connect to a server
+	// by IP address and pretend to be asking for an incorrect host name.
+	// Manager will attempt to obtain a certificate for that host, incorrectly,
+	// eventually reaching the CA's rate limit for certificate requests
+	// and making it impossible to obtain actual certificates.
+	//
+	// See GetCertificate for more details.
+	HostPolicy  HostPolicy
+
 	BackendName string
 	CAServer    string
 	DNSProvider string
@@ -224,6 +247,9 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 		//if clientHello.ServerName != a.Domain.Main {
 		//	return nil, fmt.Errorf("[go-acme] Unknown server name: %s", clientHello.ServerName)
 		//}
+		if err := a.hostPolicy()(clientHello.ServerName); err != nil {
+			return nil, fmt.Errorf("[go-acme] Unknown server name: %s, err: %w", clientHello.ServerName, err)
+		}
 		return dc.TLSCert, nil
 	}
 	a.Logger.Println("Loaded certificate...")
@@ -238,4 +264,38 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 		}
 	}()
 	return nil
+}
+
+// defaultHostPolicy is used when Manager.HostPolicy is not set.
+func defaultHostPolicy(string) error {
+	return nil
+}
+
+// HostWhitelist returns a policy where only the specified host names are allowed.
+// Only exact matches are currently supported. Subdomains, regexp or wildcard
+// will not match.
+// waring: in here, we do not convert hosts to Punycode via idna.Lookup.ToASCII like golang.org/x/crypto/acme/autocert
+// but only convert to lower case, since idna.Lookup.ToASCII("TEST-UPPER-CASE.com") will result in "test-upper-case.com"
+// Invalid hosts will be silently ignored.
+func HostWhitelist(hosts ...string) HostPolicy {
+	whitelist := make(map[string]bool, len(hosts))
+	for _, h := range hosts {
+		h = strings.ToLower(strings.TrimSpace(h))
+		if h != "" {
+			whitelist[h] = true
+		}
+	}
+	return func(host string) error {
+		if !whitelist[host] {
+			return fmt.Errorf("host %q not configured in HostWhitelist", host)
+		}
+		return nil
+	}
+}
+
+func (a *ACME) hostPolicy() HostPolicy {
+	if a.HostPolicy != nil {
+		return a.HostPolicy
+	}
+	return defaultHostPolicy
 }
