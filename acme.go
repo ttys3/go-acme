@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/go-acme/lego/v3/challenge"
 	"log"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -248,6 +249,12 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 		//if clientHello.ServerName != a.Domain.Main {
 		//	return nil, fmt.Errorf("[go-acme] Unknown server name: %s", clientHello.ServerName)
 		//}
+		// skip ServerName validation for loopback request
+		if rhost, _, err := net.SplitHostPort(clientHello.Conn.RemoteAddr().String()); err == nil {
+			if rip := net.ParseIP(rhost); rip != nil && rip.IsLoopback() {
+				return dc.TLSCert, nil
+			}
+		}
 		if err := a.hostPolicy()(clientHello.ServerName); err != nil {
 			return nil, fmt.Errorf("[go-acme] Unknown server name: %s, err: %w", clientHello.ServerName, err)
 		}
