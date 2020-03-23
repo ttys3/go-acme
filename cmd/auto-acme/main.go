@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"flag"
 	"fmt"
 	acme "github.com/ttys3/go-acme"
 	"github.com/ttys3/go-acme/types"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -23,6 +25,8 @@ const (
 	certPathEnv = "GO_ACME_CERT_PATH"
 )
 
+var succesRunCmd string
+
 func main() {
 	// show version
 	if len(os.Args) == 2 && os.Args[1] == "-v" {
@@ -30,13 +34,16 @@ func main() {
 		os.Exit(0)
 	}
 
+	flag.StringVar(&succesRunCmd, "cmd", "", "command to run after success")
+	flag.Parse()
+
 	fmt.Printf("======== auto-acme %s ========\n", appVersion)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel() // cancel when we are finished consuming integers
 
 	if _, err := autocertManager(ctx); err != nil {
 		// just print the error message, do not exit, friendly to container
-		log.Println(err)
+		log.Printf("[auto-acme] err: %s\n", err)
 	} else {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -49,6 +56,20 @@ func main() {
 				os.Exit(0)
 			}
 		}()
+		// run hook command
+		succesRunCmd = strings.TrimSpace(succesRunCmd)
+		if succesRunCmd != "" {
+			log.Printf("try run command: %s\n", succesRunCmd)
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, time.Second * 3)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, "sh", "-c", succesRunCmd)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				zap.S().Errorf("[auto-acme] err run command: %s, out: %s\n", err, out)
+			} else {
+				zap.S().Infof("[auto-acme] run command successfully: %s", succesRunCmd)
+			}
+		}
 	}
 
 	//endless loop
