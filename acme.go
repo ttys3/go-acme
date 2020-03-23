@@ -2,6 +2,7 @@ package acme
 // see https://go-acme.github.io/lego/usage/library/
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -17,9 +18,9 @@ import (
 	"github.com/go-acme/lego/v3/registration"
 	"github.com/jtblin/go-logger"
 
-	"github.com/jtblin/go-acme/backend"
-	_ "github.com/jtblin/go-acme/backend/backends" // import all backends.
-	"github.com/jtblin/go-acme/types"
+	"github.com/ttys3/go-acme/backend"
+	_ "github.com/ttys3/go-acme/backend/backends" // import all backends.
+	"github.com/ttys3/go-acme/types"
 )
 
 const (
@@ -61,6 +62,8 @@ type ACME struct {
 	DNSProvider string
 	Email       string
 	KeyType     string
+	KeyPath				string
+	CertPath			string
 	SelfSigned  bool
 }
 
@@ -154,7 +157,7 @@ func (a *ACME) getDomainCertificate(client *lego.Client, domains []string) (*cer
 }
 
 // CreateConfig creates a tls.config from using ACME configuration
-func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
+func (a *ACME) CreateConfig(ctx context.Context, tlsConfig *tls.Config) error {
 	if a.Logger == nil {
 		a.Logger = log.New(os.Stdout, "[go-acme] ", log.Ldate|log.Ltime|log.Lshortfile)
 	}
@@ -197,7 +200,7 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 		}
 	} else {
 		a.Logger.Println("Generating ACME Account...")
-		account, err = types.NewAccount(a.Email, a.Domain, a.KeyType, a.Logger)
+		account, err = types.NewAccount(a.Email, a.Domain, a.KeyType, a.KeyPath, a.CertPath, a.Logger)
 		if err != nil {
 			return fmt.Errorf("[go-acme] NewAccount err: %w", err)
 		}
@@ -264,13 +267,20 @@ func (a *ACME) CreateConfig(tlsConfig *tls.Config) error {
 
 	ticker := time.NewTicker(24 * time.Hour)
 	go func() {
-		for range ticker.C {
-			if err := a.renewCertificate(client, account); err != nil {
-				a.Logger.Printf("Error renewing ACME certificate %q: %s\n",
-					account.DomainsCertificate.Domain.Main, err.Error())
+		for {
+			select {
+			case <-ctx.Done():
+				a.Logger.Println("ACME exited successfully")
+				return // returning not to leak the goroutine
+			case <-ticker.C:
+				if err := a.renewCertificate(client, account); err != nil {
+					a.Logger.Printf("Error renewing ACME certificate %q: %s\n",
+						account.DomainsCertificate.Domain.Main, err.Error())
+				}
 			}
 		}
 	}()
+	a.Logger.Println("ACME timer setup done")
 	return nil
 }
 

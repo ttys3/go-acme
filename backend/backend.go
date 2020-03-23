@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jtblin/go-acme/types"
+	"github.com/ttys3/go-acme/types"
 )
 
 // All registered backends.

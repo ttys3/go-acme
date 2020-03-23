@@ -35,8 +35,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-	"github.com/jtblin/go-acme/backend"
-	"github.com/jtblin/go-acme/types"
+	"github.com/ttys3/go-acme/backend"
+	"github.com/ttys3/go-acme/types"
 )
 
 const (

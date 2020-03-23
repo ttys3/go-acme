@@ -1,8 +1,8 @@
 package null
 
 import (
-	"github.com/jtblin/go-acme/backend"
-	"github.com/jtblin/go-acme/types"
+	"github.com/ttys3/go-acme/backend"
+	"github.com/ttys3/go-acme/types"
 )
 
 const (

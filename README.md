@@ -131,9 +131,9 @@ So not appropriate for internal services with no public internet access. Only of
 for Let's Encrypt certificates.
 * [Generate and Use Free TLS Certificates with Lego](https://blog.gopheracademy.com/advent-2015/generate-free-tls-certs-with-lego/)
 
-# Author
+# About this project
 
-Jerome Touffe-Blin, [@jtblin](https://twitter.com/jtblin), [About me](http://about.me/jtblin)
+this project was fork from github.com/jtblin/go-acme and made lots of change thus it is not compatible with the old package anymore
 
 # License
 

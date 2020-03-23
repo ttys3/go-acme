@@ -18,7 +18,7 @@ package backends
 
 import (
 	// initialise all backends.
-	_ "github.com/jtblin/go-acme/backend/backends/fs"
-	_ "github.com/jtblin/go-acme/backend/backends/null"
-	_ "github.com/jtblin/go-acme/backend/backends/s3"
+	_ "github.com/ttys3/go-acme/backend/backends/fs"
+	_ "github.com/ttys3/go-acme/backend/backends/null"
+	_ "github.com/ttys3/go-acme/backend/backends/s3"
 )

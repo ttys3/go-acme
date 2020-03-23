@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strings"
 	"sync"
 
-	"github.com/jtblin/go-acme/backend"
-	"github.com/jtblin/go-acme/types"
+	"github.com/ttys3/go-acme/backend"
+	"github.com/ttys3/go-acme/types"
 )
 
 const (
@@ -46,7 +47,25 @@ func (s *storage) SaveAccount(account *types.Account) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(s.key(account.DomainsCertificate.Domain.Main), data, 0644)
+	savePath := s.key(account.DomainsCertificate.Domain.Main)
+	if err := ioutil.WriteFile(savePath, data, 0644); err != nil {
+		return err
+	}
+	account.Logger.Printf("saved account to: %s", savePath)
+	// save to file
+	if account.KeyPath != "" {
+		if err := ioutil.WriteFile(account.KeyPath, account.DomainsCertificate.Certificate.PrivateKey, 0644); err != nil {
+			return err
+		}
+		account.Logger.Printf("saved key to: %s", account.KeyPath)
+	}
+	if account.CertPath != "" {
+		if err := ioutil.WriteFile(account.CertPath, account.DomainsCertificate.Certificate.Certificate, 0644); err != nil {
+			return err
+		}
+		account.Logger.Printf("saved cert to: %s", account.CertPath)
+	}
+	return nil
 }
 
 // LoadAccount loads the account from the filesystem.
@@ -73,6 +92,7 @@ func (s *storage) LoadAccount(domain string) (*types.Account, error) {
 	if err := json.Unmarshal(file, &account); err != nil {
 		return nil, fmt.Errorf("Error loading account: %v", err)
 	}
+	log.Printf("ACME fs backend loaded account from : %s", storageFile)
 	return &account, nil
 }
 

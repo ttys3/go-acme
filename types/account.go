@@ -17,6 +17,8 @@ import (
 type Account struct {
 	KeyType            string
 	Email              string
+	KeyPath				string
+	CertPath			string
 	DomainsCertificate *DomainCertificate
 	Logger      	   logger.Interface	  `json:"-"`
 	PrivateKey         []byte
@@ -61,7 +63,7 @@ func (a *Account) GetKeyType() certcrypto.KeyType {
 }
 
 // NewAccount creates a new account for the specified email and domain.
-func NewAccount(email string, domain *Domain, keyType string, logger logger.Interface) (*Account, error) {
+func NewAccount(email string, domain *Domain, keyType string, keyPath, certPath string, logger logger.Interface) (*Account, error) {
 	// Create a user. New accounts need an email and private key to start
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
@@ -72,6 +74,8 @@ func NewAccount(email string, domain *Domain, keyType string, logger logger.Inte
 		Logger:     logger,
 		KeyType:    keyType,
 		PrivateKey: x509.MarshalPKCS1PrivateKey(privateKey),
+		KeyPath: keyPath,
+		CertPath: certPath,
 	}
 	account.DomainsCertificate = &DomainCertificate{
 		Certificate: &Resource{},
