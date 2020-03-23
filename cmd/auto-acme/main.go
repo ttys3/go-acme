@@ -23,6 +23,7 @@ var appVersion = "dev"
 const (
 	keyPathEnv  = "GO_ACME_KEY_PATH"
 	certPathEnv = "GO_ACME_CERT_PATH"
+	caServerEnv = "GO_ACME_CA_SERVER"
 )
 
 var interval int
@@ -156,6 +157,7 @@ func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Dur
 			Domain:      theDomain,
 			KeyPath:     os.Getenv(keyPathEnv),
 			CertPath:    os.Getenv(certPathEnv),
+			CAServer:	 os.Getenv(caServerEnv),
 		}
 
 		zap.S().Infof("autocertManager(): auto ACME begin, use ACME: %v, dns provider: %s, key type: %s", useAcme, dnsprovider, keyType)
