@@ -157,7 +157,7 @@ func (a *ACME) getDomainCertificate(client *lego.Client, domains []string) (*cer
 }
 
 // CreateConfig creates a tls.config from using ACME configuration
-func (a *ACME) CreateConfig(ctx context.Context, tlsConfig *tls.Config) error {
+func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, tlsConfig *tls.Config) error {
 	if a.Logger == nil {
 		a.Logger = log.New(os.Stdout, "[go-acme] ", log.Ldate|log.Ltime|log.Lshortfile)
 	}
@@ -276,6 +276,9 @@ func (a *ACME) CreateConfig(ctx context.Context, tlsConfig *tls.Config) error {
 				if err := a.renewCertificate(client, account); err != nil {
 					a.Logger.Printf("Error renewing ACME certificate %q: %s\n",
 						account.DomainsCertificate.Domain.Main, err.Error())
+				} else {
+					// notify the consumer
+					outSuccCh <- struct{}{}
 				}
 			}
 		}
