@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	acme "github.com/ttys3/go-acme"
+	"github.com/ttys3/go-acme/types"
+	"go.uber.org/zap"
 	"io"
 	"os"
 	"os/signal"
 	"strings"
-	acme "github.com/ttys3/go-acme"
-	"github.com/ttys3/go-acme/types"
-	"go.uber.org/zap"
 	"syscall"
 	"time"
 )
@@ -34,21 +34,23 @@ func main() {
 	defer cancel() // cancel when we are finished consuming integers
 
 	if _, err := autocertManager(ctx); err != nil {
-		panic(err)
+		// just print the error message, do not exit, friendly to container
+		zap.S().Errorf(err.Error())
+	} else {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		go func(){
+			for sig:= range c {
+				// sig is a ^C, handle it
+				zap.S().Infof("captured %v, stopping and exiting..", sig)
+				cancel()
+				time.Sleep(time.Millisecond * 300)
+				os.Exit(0)
+			}
+		}()
 	}
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func(){
-		for sig:= range c {
-			// sig is a ^C, handle it
-			zap.S().Infof("captured %v, stopping and exiting..", sig)
-			cancel()
-			time.Sleep(time.Millisecond * 300)
-			os.Exit(0)
-		}
-	}()
-
+	// endless loop
 	for {
 		time.Sleep(time.Hour * 24)
 	}
