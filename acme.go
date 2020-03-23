@@ -105,6 +105,7 @@ func (a *ACME) renewCertificate(client *lego.Client, account *types.Account) err
 	dc := account.DomainsCertificate
 
 	// if is "fs", check if file not exists, force an update
+	// @TODO implement this as a backend interface method: ValidateStoraged()
 	backendForcedUpdate := false
 	if a.backend.Name() == fs.BackendName && a.KeyPath != "" && a.CertPath != "" {
 		if _, err := os.Stat(a.KeyPath); os.IsNotExist(err) {
