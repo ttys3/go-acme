@@ -53,13 +53,12 @@ func (s *storage) SaveAccount(account *types.Account) error {
 	}
 	account.Logger.Printf("saved account to: %s", savePath)
 	// save to file
-	if account.KeyPath != "" {
+	if account.KeyPath != "" && account.CertPath != "" {
 		if err := ioutil.WriteFile(account.KeyPath, account.DomainsCertificate.Certificate.PrivateKey, 0644); err != nil {
 			return err
 		}
 		account.Logger.Printf("saved key to: %s", account.KeyPath)
-	}
-	if account.CertPath != "" {
+
 		if err := ioutil.WriteFile(account.CertPath, account.DomainsCertificate.Certificate.Certificate, 0644); err != nil {
 			return err
 		}
