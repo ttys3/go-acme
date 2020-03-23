@@ -20,5 +20,5 @@ GO_ACME_STORAGE_DIR=${ACME_ROOT_DIR} \
 AUTOCERT_EMAIL=foo@outlook.com \
 AUTOCERT_DOMAIN=ttys3.net \
 AUTOCERT_DNS_PROVIDER=cloudflare \
-CF_DNS_API_TOKEN="${CF_DNS_API_TOKEN}" ./auto-acme
+CF_DNS_API_TOKEN="${CF_DNS_API_TOKEN}" ./auto-acme --cmd "date >> /tmp/acme.txt"
 

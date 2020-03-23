@@ -25,7 +25,9 @@ const (
 	certPathEnv = "GO_ACME_CERT_PATH"
 )
 
-var succesRunCmd string
+var interval int
+var successRunCmd string
+var testing bool
 
 func main() {
 	// show version
@@ -34,9 +36,11 @@ func main() {
 		os.Exit(0)
 	}
 
-	flag.StringVar(&succesRunCmd, "cmd", "", "command to run after success")
+	flag.StringVar(&successRunCmd, "cmd", "", "command to run after success")
+	flag.IntVar(&interval, "interval", 24, "hours to wait between updates check")
+	flag.BoolVar(&testing, "test", false, "set waiting interval unit to seconds instead of hours for testing")
 	flag.Parse()
-	succesRunCmd = strings.TrimSpace(succesRunCmd)
+	successRunCmd = strings.TrimSpace(successRunCmd)
 
 	fmt.Printf("======== auto-acme %s ========\n", appVersion)
 
@@ -45,7 +49,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel() // cancel when we are finished consuming integers
 
-	if _, err := autocertManager(ctx, succCh); err != nil {
+	it := time.Hour * time.Duration(interval)
+	if testing {
+		it = time.Second * time.Duration(interval)
+		zap.S().Infof("testing mode: set waiting interval unit to %d seconds", interval)
+	}
+	if _, err := autocertManager(ctx, succCh, it); err != nil {
 		// just print the error message, do not exit, friendly to container
 		log.Printf("[auto-acme] err: %s\n", err)
 	} else {
@@ -62,12 +71,12 @@ func main() {
 						os.Exit(0)
 					case msg := <-succCh:
 						zap.S().Infof("got success notify: %v, try run hook again...", msg)
-						runHook(succesRunCmd)
+						runHook(successRunCmd)
 				}
 			}
 		}()
 		// run hook command
-		runHook(succesRunCmd)
+		runHook(successRunCmd)
 	}
 
 	//endless loop
@@ -98,7 +107,7 @@ func printVersion(w io.Writer) {
 		"Distributed under the Simplified BSD License\n\n", appVersion)
 }
 
-func autocertManager(ctx context.Context, outSuccCh chan<- struct{}) (tlsConfig *tls.Config, err error) {
+func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Duration) (tlsConfig *tls.Config, err error) {
 	email := os.Getenv("AUTOCERT_EMAIL")
 	if email == "" {
 		email = "NanoDM@gmail.com"
@@ -161,7 +170,7 @@ func autocertManager(ctx context.Context, outSuccCh chan<- struct{}) (tlsConfig 
 			}
 		}
 		tlsConfig := &tls.Config{}
-		if err := ACME.CreateConfig(ctx, outSuccCh, tlsConfig); err != nil {
+		if err := ACME.CreateConfig(ctx, outSuccCh, it, tlsConfig); err != nil {
 			panic(err)
 		}
 		zap.S().Infof("autocertManager(): auto ACME done")

@@ -157,7 +157,7 @@ func (a *ACME) getDomainCertificate(client *lego.Client, domains []string) (*cer
 }
 
 // CreateConfig creates a tls.config from using ACME configuration
-func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, tlsConfig *tls.Config) error {
+func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, interval time.Duration, tlsConfig *tls.Config) error {
 	if a.Logger == nil {
 		a.Logger = log.New(os.Stdout, "[go-acme] ", log.Ldate|log.Ltime|log.Lshortfile)
 	}
@@ -265,7 +265,7 @@ func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, tlsC
 	}
 	a.Logger.Println("Loaded certificate...")
 
-	ticker := time.NewTicker(24 * time.Hour)
+	ticker := time.NewTicker(interval)
 	go func() {
 		for {
 			select {
