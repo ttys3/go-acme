@@ -6,7 +6,7 @@ go build ./cmd/auto-acme
 
 ACME_ROOT_DIR=/tmp/acme
 
-CF_DNS_API_TOKEN="-xxxxxxxxxxx"
+CF_DNS_API_TOKEN=${CF_TOKEN:-dftInvalidKey}
 
 test -d ${ACME_ROOT_DIR} || mkdir -p ${ACME_ROOT_DIR}
 
