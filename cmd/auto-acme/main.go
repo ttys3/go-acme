@@ -8,6 +8,7 @@ import (
 	"github.com/ttys3/go-acme/types"
 	"go.uber.org/zap"
 	"io"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -35,7 +36,7 @@ func main() {
 
 	if _, err := autocertManager(ctx); err != nil {
 		// just print the error message, do not exit, friendly to container
-		zap.S().Errorf(err.Error())
+		log.Println(err)
 	} else {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -50,7 +51,7 @@ func main() {
 		}()
 	}
 
-	// endless loop
+	//endless loop
 	for {
 		time.Sleep(time.Hour * 24)
 	}
