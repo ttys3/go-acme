@@ -14,6 +14,7 @@ curl -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
      -H "Authorization: Bearer ${CF_DNS_API_TOKEN}" \
      -H "Content-Type:application/json" && \
 env HTTP_PROXY=http://127.0.0.1:7070 \
+GO_ACME_CA_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory" \
 GO_ACME_KEY_PATH=${ACME_ROOT_DIR}/foo.key \
 GO_ACME_CERT_PATH=${ACME_ROOT_DIR}/foo.crt \
 GO_ACME_STORAGE_DIR=${ACME_ROOT_DIR} \

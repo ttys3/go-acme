@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/go-acme/lego/v3/challenge"
+	"github.com/ttys3/go-acme/backend/backends/fs"
 	"log"
 	"net"
 	"os"
@@ -102,7 +103,20 @@ func needsUpdate(cert *tls.Certificate) bool {
 
 func (a *ACME) renewCertificate(client *lego.Client, account *types.Account) error {
 	dc := account.DomainsCertificate
-	if needsUpdate(dc.TLSCert) {
+
+	// if is "fs", check if file not exists, force an update
+	backendForcedUpdate := false
+	if a.backend.Name() == fs.BackendName && a.KeyPath != "" && a.CertPath != "" {
+		if _, err := os.Stat(a.KeyPath); os.IsNotExist(err) {
+			backendForcedUpdate = true
+		} else if _, err := os.Stat(a.CertPath); os.IsNotExist(err) {
+			backendForcedUpdate = true
+		}
+		if backendForcedUpdate {
+			a.Logger.Printf("backend forced update")
+		}
+	}
+	if needsUpdate(dc.TLSCert) || backendForcedUpdate {
 		mustStaple := false
 		renewedCert, err := client.Certificate.Renew(certificate.Resource(*dc.Certificate), bundleCA, mustStaple)
 		if err != nil {

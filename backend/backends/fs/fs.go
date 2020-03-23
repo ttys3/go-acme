@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	backendName   = "fs"
+	BackendName   = "fs"
 	storageDirEnv = "GO_ACME_STORAGE_DIR"
 )
 
@@ -26,7 +26,7 @@ type storage struct {
 
 // Name returns the display name of the backend.
 func (s *storage) Name() string {
-	return backendName
+	return BackendName
 }
 
 func (s *storage) key(domain string) string {
@@ -51,18 +51,18 @@ func (s *storage) SaveAccount(account *types.Account) error {
 	if err := ioutil.WriteFile(savePath, data, 0644); err != nil {
 		return err
 	}
-	account.Logger.Printf("saved account to: %s", savePath)
+	log.Printf("[ACME fs backend] saved account to: %s", savePath)
 	// save to file
 	if account.KeyPath != "" && account.CertPath != "" {
 		if err := ioutil.WriteFile(account.KeyPath, account.DomainsCertificate.Certificate.PrivateKey, 0644); err != nil {
 			return err
 		}
-		account.Logger.Printf("saved key to: %s", account.KeyPath)
+		log.Printf("[ACME fs backend] saved key to: %s", account.KeyPath)
 
 		if err := ioutil.WriteFile(account.CertPath, account.DomainsCertificate.Certificate.Certificate, 0644); err != nil {
 			return err
 		}
-		account.Logger.Printf("saved cert to: %s", account.CertPath)
+		log.Printf("[ACME fs backend] saved cert to: %s", account.CertPath)
 	}
 	return nil
 }
@@ -110,7 +110,7 @@ func newBackend() (backend.Interface, error) {
 }
 
 func init() {
-	backend.RegisterBackend(backendName, func() (backend.Interface, error) {
+	backend.RegisterBackend(BackendName, func() (backend.Interface, error) {
 		return newBackend()
 	})
 }
