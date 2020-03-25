@@ -103,7 +103,7 @@ func runHook(runCmd string) {
 
 func printVersion(w io.Writer) {
 	fmt.Fprintf(w, "auto-acme %s"+
-		"\nAvailable at http://github.com/ttys3/auto-acme \n\n"+
+		"\nAvailable at http://github.com/ttys3/go-acme \n\n"+
 		"Copyright © 2020 荒野無燈 <https://ttys3.net>\n"+
 		"Distributed under the Simplified BSD License\n\n", appVersion)
 }
