@@ -60,7 +60,7 @@ func main() {
 	}
 	if _, err := autocertManager(ctx, succCh, it); err != nil {
 		// just print the error message, do not exit, friendly to container
-		zap.S().Errorf("[auto-acme] err: %s", err)
+		zap.S().Errorf("err: %s", err)
 	} else {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -91,15 +91,17 @@ func main() {
 
 func runHook(runCmd string) {
 	if runCmd != "" {
-		zap.S().Infof("try run command: %s", runCmd)
+		zap.S().Infof("try runHook, cmd: [%s]", runCmd)
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, time.Second*3)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, "sh", "-c", runCmd)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			zap.S().Errorf("[auto-acme] err run command: %s, out: %s", err, out)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			zap.S().Errorf("runHook err : %s, cmd: [%s]", err, runCmd)
 		} else {
-			zap.S().Infof("[auto-acme] run command successfully: %s, output: \n%s", runCmd, out)
+			zap.S().Infof("runHook successfully, cmd: [%s]", runCmd)
 		}
 	}
 }
@@ -161,6 +163,7 @@ func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Dur
 			KeyPath:     os.Getenv(keyPathEnv),
 			CertPath:    os.Getenv(certPathEnv),
 			CAServer:	 os.Getenv(caServerEnv),
+			Logger: 	 zap.NewStdLog(logger),
 		}
 
 		zap.S().Infof("autocertManager(): auto ACME begin, use ACME: %v, dns provider: %s, key type: %s",
@@ -189,7 +192,8 @@ func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Dur
 func initLogger() func() {
 	zapCfg := zap.NewDevelopmentConfig()
 	zapCfg.DisableCaller = true
-	logger, _ = zapCfg.Build()
+	tmpLogger, _ := zapCfg.Build()
+	logger = tmpLogger.Named("[auto-acme]")
 	//The default global logger used by zap.L() and zap.S() is a no-op logger.
 	//To configure the global loggers, you must use ReplaceGlobals.
 	zap.ReplaceGlobals(logger)

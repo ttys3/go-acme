@@ -91,7 +91,7 @@ func (s *storage) LoadAccount(domain string) (*types.Account, error) {
 	if err := json.Unmarshal(file, &account); err != nil {
 		return nil, fmt.Errorf("Error loading account: %v", err)
 	}
-	log.Printf("ACME fs backend loaded account from : %s", storageFile)
+	log.Printf("[ACME fs backend] loaded account from : %s", storageFile)
 	return &account, nil
 }
 
