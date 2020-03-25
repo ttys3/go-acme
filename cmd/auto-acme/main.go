@@ -9,7 +9,6 @@ import (
 	"github.com/ttys3/go-acme/types"
 	"go.uber.org/zap"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -30,7 +29,11 @@ var interval int
 var successRunCmd string
 var testing bool
 
+var logger *zap.Logger
+
 func main() {
+	flushLog := initLogger()
+	defer flushLog()
 	// show version
 	if len(os.Args) == 2 && os.Args[1] == "-v" {
 		printVersion(os.Stdout)
@@ -53,11 +56,11 @@ func main() {
 	it := time.Hour * time.Duration(interval)
 	if testing {
 		it = time.Second * time.Duration(interval)
-		zap.S().Infof("testing mode: set waiting interval unit to %d seconds", interval)
+		zap.S().Infof("testing mode: set waiting interval unit to second. current value: %d seconds", interval)
 	}
 	if _, err := autocertManager(ctx, succCh, it); err != nil {
 		// just print the error message, do not exit, friendly to container
-		log.Printf("[auto-acme] err: %s\n", err)
+		zap.S().Errorf("[auto-acme] err: %s", err)
 	} else {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -88,15 +91,15 @@ func main() {
 
 func runHook(runCmd string) {
 	if runCmd != "" {
-		log.Printf("try run command: %s\n", runCmd)
+		zap.S().Infof("try run command: %s", runCmd)
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, time.Second*3)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, "sh", "-c", runCmd)
 		if out, err := cmd.CombinedOutput(); err != nil {
-			zap.S().Errorf("[auto-acme] err run command: %s, out: %s\n", err, out)
+			zap.S().Errorf("[auto-acme] err run command: %s, out: %s", err, out)
 		} else {
-			zap.S().Infof("[auto-acme] run command successfully: %s", runCmd)
+			zap.S().Infof("[auto-acme] run command successfully: %s, output: \n%s", runCmd, out)
 		}
 	}
 }
@@ -179,5 +182,17 @@ func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Dur
 		return tlsConfig, nil
 	} else {
 		return nil, fmt.Errorf("autocertManager(): env var AUTOCERT_DNS_PROVIDER and AUTOCERT_DOMAIN must not be empty")
+	}
+}
+
+func initLogger() func() {
+	zapCfg := zap.NewDevelopmentConfig()
+	zapCfg.DisableCaller = true
+	logger, _ = zapCfg.Build()
+	//The default global logger used by zap.L() and zap.S() is a no-op logger.
+	//To configure the global loggers, you must use ReplaceGlobals.
+	zap.ReplaceGlobals(logger)
+	return func() {
+		logger.Sync() // flushes buffer, if any
 	}
 }
