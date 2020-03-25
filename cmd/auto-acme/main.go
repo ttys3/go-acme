@@ -163,7 +163,8 @@ func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Dur
 			CAServer:	 os.Getenv(caServerEnv),
 		}
 
-		zap.S().Infof("autocertManager(): auto ACME begin, use ACME: %v, dns provider: %s, key type: %s", useAcme, dnsprovider, keyType)
+		zap.S().Infof("autocertManager(): auto ACME begin, use ACME: %v, dns provider: %s, key type: %s",
+			useAcme, dnsprovider, keyType)
 		zap.S().Infof("autocertManager(): email: %s, domains: %+v", email, validDomains)
 
 		domainWhitelist := strings.TrimSpace(domainWhitelist)
