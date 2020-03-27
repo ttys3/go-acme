@@ -58,7 +58,7 @@ func main() {
 		it = time.Second * time.Duration(interval)
 		zap.S().Infof("testing mode: set waiting interval unit to second. current value: %d seconds", interval)
 	}
-	if _, err := autocertManager(ctx, succCh, it); err != nil {
+	if _, updated, err := autocertManager(ctx, succCh, it); err != nil {
 		// just print the error message, do not exit, friendly to container
 		zap.S().Errorf("err: %s", err)
 	} else {
@@ -80,7 +80,11 @@ func main() {
 			}
 		}()
 		// run hook command
-		runHook(successRunCmd)
+		if updated {
+			runHook(successRunCmd)
+		} else if testing {
+			zap.S().Infof("certificate is valid and no need to run the hook")
+		}
 	}
 
 	//endless loop
@@ -113,7 +117,8 @@ func printVersion(w io.Writer) {
 		"Distributed under the Simplified BSD License\n\n", appVersion)
 }
 
-func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Duration) (tlsConfig *tls.Config, err error) {
+func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Duration) (tlsConfig *tls.Config, updated bool, err error) {
+	updated = false
 	email := os.Getenv("AUTOCERT_EMAIL")
 	if email == "" {
 		email = "NanoDM@gmail.com"
@@ -179,13 +184,15 @@ func autocertManager(ctx context.Context, outSuccCh chan<- struct{}, it time.Dur
 			}
 		}
 		tlsConfig := &tls.Config{}
-		if err := ACME.CreateConfig(ctx, outSuccCh, it, tlsConfig); err != nil {
+		if isUpdated, err := ACME.CreateConfig(ctx, outSuccCh, it, tlsConfig); err != nil {
 			panic(err)
+		} else {
+			updated = isUpdated
 		}
 		zap.S().Infof("autocertManager(): auto ACME done")
-		return tlsConfig, nil
+		return tlsConfig, updated, nil
 	} else {
-		return nil, fmt.Errorf("autocertManager(): env var AUTOCERT_DNS_PROVIDER and AUTOCERT_DOMAIN must not be empty")
+		return nil, updated, fmt.Errorf("autocertManager(): env var AUTOCERT_DNS_PROVIDER and AUTOCERT_DOMAIN must not be empty")
 	}
 }
 

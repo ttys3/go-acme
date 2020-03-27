@@ -101,7 +101,8 @@ func needsUpdate(cert *tls.Certificate) bool {
 	return false
 }
 
-func (a *ACME) renewCertificate(client *lego.Client, account *types.Account) error {
+func (a *ACME) renewCertificate(client *lego.Client, account *types.Account) (updated bool, err error) {
+	updated = false
 	dc := account.DomainsCertificate
 
 	// if is "fs", check if file not exists, force an update
@@ -121,17 +122,18 @@ func (a *ACME) renewCertificate(client *lego.Client, account *types.Account) err
 		mustStaple := false
 		renewedCert, err := client.Certificate.Renew(certificate.Resource(*dc.Certificate), bundleCA, mustStaple)
 		if err != nil {
-			return err
+			return false, err
 		}
 		err = dc.RenewCertificate(renewedCert, dc.Domain)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if err = a.backend.SaveAccount(account); err != nil {
-			return err
+			return false, err
 		}
+		updated = true
 	}
-	return nil
+	return updated, nil
 }
 
 func (a *ACME) buildACMEClient(Account *types.Account) (*lego.Client, error) {
@@ -172,7 +174,9 @@ func (a *ACME) getDomainCertificate(client *lego.Client, domains []string) (*cer
 }
 
 // CreateConfig creates a tls.config from using ACME configuration
-func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, interval time.Duration, tlsConfig *tls.Config) error {
+func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, interval time.Duration, tlsConfig *tls.Config) (updated bool, err error) {
+	// when the first time run, the cert or the backend cert file updated or not
+	updated = false
 	if a.Logger == nil {
 		a.Logger = log.New(os.Stdout, "[go-acme] ", log.Ldate|log.Ltime|log.Lshortfile)
 	}
@@ -183,10 +187,10 @@ func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, inte
 		a.Logger.Println("Generating self signed certificate...")
 		cert, err := generateSelfSignedCertificate(a.Domain.Main)
 		if err != nil {
-			return err
+			return false, err
 		}
 		tlsConfig.Certificates = []tls.Certificate{*cert}
-		return nil
+		return false, nil
 	}
 
 	//lego.Logger = log.New(ioutil.Discard, "", 0)
@@ -196,7 +200,7 @@ func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, inte
 	}
 	b, err := backend.InitBackend(a.BackendName)
 	if err != nil {
-		return err
+		return false, err
 	}
 	a.backend = b
 
@@ -206,29 +210,29 @@ func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, inte
 	a.Logger.Println("Loading ACME certificate...")
 	account, err = a.backend.LoadAccount(a.Domain.Main)
 	if err != nil {
-		return fmt.Errorf("[go-acme] LoadAccount() err: %w", err)
+		return false, fmt.Errorf("[go-acme] LoadAccount() err: %w", err)
 	}
 	if account != nil {
 		a.Logger.Printf("Loaded ACME config from storage %q\n", a.backend.Name())
 		if err = account.DomainsCertificate.Init(); err != nil {
-			return fmt.Errorf("[go-acme] account.DomainsCertificate.Init() err: %w", err)
+			return false,fmt.Errorf("[go-acme] account.DomainsCertificate.Init() err: %w", err)
 		}
 	} else {
 		a.Logger.Println("Generating ACME Account...")
 		account, err = types.NewAccount(a.Email, a.Domain, a.KeyType, a.KeyPath, a.CertPath, a.Logger)
 		if err != nil {
-			return fmt.Errorf("[go-acme] NewAccount err: %w", err)
+			return false, fmt.Errorf("[go-acme] NewAccount err: %w", err)
 		}
 		needRegister = true
 	}
 
 	client, err := a.buildACMEClient(account)
 	if err != nil {
-		return fmt.Errorf("[go-acme] buildACMEClient err: %w", err)
+		return false, fmt.Errorf("[go-acme] buildACMEClient err: %w", err)
 	}
 	provider, err := newDNSProvider(a.DNSProvider)
 	if err != nil {
-		return fmt.Errorf("[go-acme] newDNSProvider err: %w", err)
+		return false, fmt.Errorf("[go-acme] newDNSProvider err: %w", err)
 	}
 
 	// silent acme: Could not find solver for: tls-alpn-01
@@ -237,29 +241,38 @@ func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, inte
 	client.Challenge.Remove(challenge.HTTP01)
 
 	if err := client.Challenge.SetDNS01Provider(provider); err != nil {
-		return fmt.Errorf("[go-acme] SetDNS01Provider err: %w", err)
+		return false, fmt.Errorf("[go-acme] SetDNS01Provider err: %w", err)
 	}
 
 	if needRegister {
 		// New users need to register.
 		reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 		if err != nil {
-			return fmt.Errorf("[go-acme] client.Registration.Register err: %w", err)
+			return false, fmt.Errorf("[go-acme] client.Registration.Register err: %w", err)
 		}
 		account.Registration = reg
 	}
 
 	dc := account.DomainsCertificate
+	// if cached cert available
 	if len(dc.Certificate.Certificate) > 0 && len(dc.Certificate.PrivateKey) > 0 {
+		// try check cert and renew it if it is expired
 		go func() {
-			if err := a.renewCertificate(client, account); err != nil {
+			if isUpdated, err := a.renewCertificate(client, account); err != nil {
 				a.Logger.Printf("Error renewing ACME certificate for %q: %s\n",
 					account.DomainsCertificate.Domain.Main, err.Error())
+			} else {
+				// mark the updated flag
+				updated = isUpdated
 			}
 		}()
 	} else {
+		// get new cert
 		if _, err := a.retrieveCertificate(client, account); err != nil {
-			return err
+			return false, err
+		} else {
+			// new cert, obviously updated
+			updated = true
 		}
 	}
 	tlsConfig.GetCertificate = func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -288,18 +301,20 @@ func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, inte
 				a.Logger.Println("ACME exited successfully")
 				return // returning not to leak the goroutine
 			case <-ticker.C:
-				if err := a.renewCertificate(client, account); err != nil {
+				if isUpdated, err := a.renewCertificate(client, account); err != nil {
 					a.Logger.Printf("Error renewing ACME certificate %q: %s\n",
 						account.DomainsCertificate.Domain.Main, err.Error())
 				} else {
-					// notify the consumer
-					outSuccCh <- struct{}{}
+					// notify the consumer only if the cert or the backend cert file updated
+					if isUpdated {
+						outSuccCh <- struct{}{}
+					}
 				}
 			}
 		}
 	}()
 	a.Logger.Println("ACME timer setup done")
-	return nil
+	return updated, nil
 }
 
 // defaultHostPolicy is used when Manager.HostPolicy is not set.
