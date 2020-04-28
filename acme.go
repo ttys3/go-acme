@@ -306,7 +306,7 @@ func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, inte
 						account.DomainsCertificate.Domain.Main, err.Error())
 				} else {
 					// notify the consumer only if the cert or the backend cert file updated
-					if isUpdated {
+					if isUpdated && outSuccCh != nil {
 						outSuccCh <- struct{}{}
 					}
 				}
