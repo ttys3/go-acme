@@ -257,15 +257,10 @@ func (a *ACME) CreateConfig(ctx context.Context, outSuccCh chan<- struct{}, inte
 	// if cached cert available
 	if len(dc.Certificate.Certificate) > 0 && len(dc.Certificate.PrivateKey) > 0 {
 		// try check cert and renew it if it is expired
-		go func() {
-			if isUpdated, err := a.renewCertificate(client, account); err != nil {
-				a.Logger.Printf("Error renewing ACME certificate for %q: %s\n",
-					account.DomainsCertificate.Domain.Main, err.Error())
-			} else {
-				// mark the updated flag
-				updated = isUpdated
-			}
-		}()
+		if updated, err = a.renewCertificate(client, account); err != nil {
+			a.Logger.Printf("Error renewing ACME certificate for %q: %s\n",
+				account.DomainsCertificate.Domain.Main, err.Error())
+		}
 	} else {
 		// get new cert
 		if _, err := a.retrieveCertificate(client, account); err != nil {
