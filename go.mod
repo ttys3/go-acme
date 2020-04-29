@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/aws/aws-sdk-go v1.30.16
 	github.com/go-acme/lego/v3 v3.6.0
-	github.com/golang/protobuf v1.4.0
+	github.com/golang/protobuf v1.3.5
 	github.com/jtblin/go-logger v0.0.0-20160620131143-af42e9ac3a4a
 	github.com/sirupsen/logrus v1.5.0
 	github.com/ttys3/lego-providers v0.0.0-20191025052926-e987a47b9bd8
