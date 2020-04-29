@@ -8,6 +8,8 @@ import (
 	acme "github.com/ttys3/go-acme"
 	"github.com/ttys3/go-acme/types"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"io"
 	"os"
 	"os/exec"
@@ -202,6 +204,7 @@ func initLogger() func() {
 	zapCfg.DisableCaller = true
 	// if Development, stackLevel = WarnLevel, else ErrorLevel
 	zapCfg.Development = false
+	zapCfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	tmpLogger, _ := zapCfg.Build()
 	logger = tmpLogger.Named("[auto-acme]")
 	//The default global logger used by zap.L() and zap.S() is a no-op logger.
